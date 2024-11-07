@@ -1,0 +1,269 @@
+<Window x:Class="MyProject.Common.CommonControls.CustomMessageBox"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:MyProject.Common.CommonControls"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        Width="370"
+        Height="200"
+        KeyDown="OnKeyDownHandler"
+        Style="{StaticResource Project_Window_Style}"
+        WindowStartupLocation="CenterScreen"
+        mc:Ignorable="d">
+    <Grid>
+        <Border Grid.Row="1"
+                Background="WhiteSmoke"
+                BorderBrush="Black"
+                BorderThickness="1,0,1,1"
+                CornerRadius="0 0 10 10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="10" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="20" />
+                    <RowDefinition Height="40" />
+                    <RowDefinition Height="10" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <materialDesign:PackIcon x:Name="AlertIcon"
+                                             Width="60"
+                                             Height="60"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Foreground="#FFA000"
+                                             Kind="Alert" />
+
+                    <materialDesign:PackIcon x:Name="AlertCircleIcon"
+                                             Width="60"
+                                             Height="60"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Foreground="#D32F2F"
+                                             Kind="AlertCircle" />
+
+                    <materialDesign:PackIcon x:Name="CheckCircleIcon"
+                                             Width="60"
+                                             Height="60"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center"
+                                             Foreground="#388E3C"
+                                             Kind="CheckCircle" />
+                    <TextBlock x:Name="MessageTextBlock"
+                               Grid.Column="1"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource Project_TextBlock_unlimit}"
+                               TextAlignment="Left"
+                               TextWrapping="Wrap" />
+                </Grid>
+                <StackPanel Grid.Row="3"
+                            Margin="0,0,20,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Orientation="Horizontal">
+                    <Button x:Name="OkButton"
+                            Content="Ok"
+                            Style="{StaticResource Project_Button}" />
+                    <Button x:Name="CancelButton"
+                            Content="Cancel"
+                            Style="{StaticResource Project_Button}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
+
+
+
+// CustomMessageBox.xaml.cs
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+
+namespace MyProject.Common.CommonControls
+{
+    public enum CustomMessageBoxStatus
+    {
+        Alert,  
+        Error,  
+        Check   
+    }
+
+    public enum CustomMessageBoxButton
+    {
+        OkCancel,   
+        Ok,         
+        YesNo       
+    }
+
+    /// <summary>
+    /// CustomMessageBox.xaml
+    /// </summary>
+    public partial class CustomMessageBox : Window
+    {
+        private bool isButton = false;
+        public bool Result { get; private set; } = false;
+
+        public CustomMessageBox(string message, string title, CustomMessageBoxStatus customMessageBoxStatus, CustomMessageBoxButton customMessageBoxButton)
+        {
+            InitializeComponent();
+            // Adjust Window width based on message length
+            double estimatedHeight = MeasureTextHeight(message, MessageTextBlock.FontSize, MessageTextBlock.FontFamily, this.Width);
+            double estimatedWidth = MeasureTextWidth(message, MessageTextBlock.FontSize, MessageTextBlock.FontFamily);
+            this.Height = Math.Max(estimatedHeight + 150, 200); // Set a minimum height with some padding
+            this.Width = Math.Max(estimatedWidth + 50, 370); // Set a minimum width, e.g., 300, and add some padding
+
+            Title = title;
+            ShowStatus(customMessageBoxStatus);
+            ShowButton(customMessageBoxButton);
+            MessageTextBlock.Text = message;
+            
+
+            if (customMessageBoxButton == CustomMessageBoxButton.Ok)
+            {
+                isButton = true;
+            }
+
+            this.Topmost = true;
+        }
+
+        private void OkButton_Click(object sender, RoutedEventArgs e)
+        {
+            Result = true;
+            this.Close();
+        }
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (isButton == true)
+            {
+                Result = true;
+            }
+            else
+            {
+                Result = false;
+            }
+
+            this.Close();
+        }
+
+        public static bool Show(string message, CustomMessageBoxStatus customMessageBoxStatus = CustomMessageBoxStatus.Check, CustomMessageBoxButton customMessageBoxButton = CustomMessageBoxButton.Ok, string title = "")
+        {
+            CustomMessageBox messageBox = new CustomMessageBox(message, title, customMessageBoxStatus, customMessageBoxButton);
+
+            messageBox.ShowDialog();
+
+            return messageBox.Result;
+        }
+
+        private void ShowStatus(CustomMessageBoxStatus customMessageBoxStatus)
+        {
+            switch ((customMessageBoxStatus))
+            {
+                case CustomMessageBoxStatus.Alert:
+                    AlertIcon.Visibility = Visibility.Visible;
+                    AlertCircleIcon.Visibility = Visibility.Hidden;
+                    CheckCircleIcon.Visibility = Visibility.Hidden;
+                    Title = string.IsNullOrEmpty(Title) ? "Alert" : Title;
+                    break;
+                case CustomMessageBoxStatus.Error:
+                    AlertIcon.Visibility = Visibility.Hidden;
+                    AlertCircleIcon.Visibility = Visibility.Visible;
+                    CheckCircleIcon.Visibility = Visibility.Hidden;
+                    Title = string.IsNullOrEmpty(Title) ? "Warning" : Title;
+                    break;
+                case CustomMessageBoxStatus.Check:
+                    AlertIcon.Visibility = Visibility.Hidden;
+                    AlertCircleIcon.Visibility = Visibility.Hidden;
+                    CheckCircleIcon.Visibility = Visibility.Visible;
+                    Title = string.IsNullOrEmpty(Title) ? "Check" : Title;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void ShowButton(CustomMessageBoxButton customMessageBoxButton)
+        {
+            switch (customMessageBoxButton)
+            {
+                case CustomMessageBoxButton.OkCancel:
+                    OkButton.Content = "Ok";
+                    CancelButton.Content = "Cancel";
+                    break;
+                case CustomMessageBoxButton.Ok:
+                    OkButton.Visibility = Visibility.Hidden;
+                    CancelButton.Content = "Ok";
+                    break;
+                case CustomMessageBoxButton.YesNo:
+                    OkButton.Content = "Yes";
+                    CancelButton.Content = "No";
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private double MeasureTextWidth(string text, double fontSize, FontFamily fontFamily)
+        {
+            var formattedText = new FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+                fontSize,
+                Brushes.Black,
+                new NumberSubstitution(),
+                1);
+
+            return formattedText.Width;
+        }
+
+        private double MeasureTextHeight(string text, double fontSize, FontFamily fontFamily, double maxWidth)
+        {
+            var formattedText = new FormattedText(
+                text,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+                fontSize,
+                Brushes.Black,
+                new NumberSubstitution(),
+                1)
+            {
+                MaxTextWidth = maxWidth - 50 // Adjust for padding
+            };
+
+            return formattedText.Height;
+        }
+
+        private void OnKeyDownHandler(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                OkButton_Click(sender, e);
+            }
+            else if (e.Key == Key.Escape)
+            {                
+                CancelButton_Click(sender, e);
+            }
+        }
+    }
+}
