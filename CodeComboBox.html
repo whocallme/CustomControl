@@ -1,0 +1,322 @@
+using Oracle.ManagedDataAccess.Client;
+using MyProject.Common.Database;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Windows;
+
+namespace MyProject.CodeCombobox
+{
+    public enum ContentType
+    {
+        KorName = 0,
+        EngName,
+        CodeValue
+    }
+
+    public class CodeComboboxData
+    {
+        public uint Index { get; set; }
+        public string Code { get; set; }
+        public string KorName { get; set; }
+        public string EngName { get; set; }
+    }
+
+    public class CodeComboBox : ComboBox
+    {
+        private IOraDB oraDB = OracleDatabaseController.Instance;
+
+        private ContentType valueType;
+        private List<CodeComboboxData> codeDataList = new List<CodeComboboxData>();
+
+        public CodeComboBox()
+        {
+            // Constructor implementation
+        }
+
+        // No select
+        public void SetNoneStatus(bool bNone)
+        {
+            if (bNone)
+            {
+                this.Items.Insert(0, "NO SELECTION");
+                
+                codeDataList.Add(new CodeComboboxData
+                {
+                    Index = 0,
+                    Code = "",
+                    KorName = "NO SELECTION",
+                    EngName = "None"
+                });
+
+                this.SelectedIndex = 0;
+            }
+        }
+
+        // query = test
+        public void SetCodeData(ContentType valueType, string mainGroup, string subGroup = "", bool bNoneStatus = false)
+        {
+            this.valueType = valueType;
+            ClearAllData();
+            string query = "";
+
+            if (subGroup.Length < 1)
+            {
+                query = string.Format($"SELECT CODE, KOR_NAME, ENG_NAME FROM TB_CODE WHERE CODE_GROUP= '{mainGroup}' AND USE='1' ORDER BY SORT ASC");
+            }
+            else
+            {
+                query = string.Format($"SELECT CODE, KOR_NAME, ENG_NAME FROM TB_CODE WHERE CODE_GROUP= '{mainGroup}' AND CODE_SUB_GROUP = '{subGroup}' AND USE='1' ORDER BY SORT ASC");
+            }
+
+
+            // Assuming you have a method to execute SQL query and return a DataTable
+            DataTable dataTable = ExecuteQuery(query);
+
+            if (dataTable != null && dataTable.Rows.Count > 0)
+            {
+                codeDataList.Clear();
+                if (bNoneStatus)
+                {
+                    SetNoneStatus(bNoneStatus);
+                }
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    CodeComboboxData data = new CodeComboboxData
+                    {
+                        Index = (uint)codeDataList.Count,
+                        Code = row["CODE"].ToString(),
+                        KorName = row["KOR_NAME"].ToString(),
+                        EngName = row["ENG_NAME"].ToString()
+                    };
+
+                    codeDataList.Add(data);
+
+                    switch (valueType)
+                    {
+                        case ContentType.KorName:
+                            this.Items.Add(data.KorName);
+                            break;
+                        case ContentType.EngName:
+                            this.Items.Add(data.EngName);
+                            break;
+                        case ContentType.CodeValue:
+                            this.Items.Add(data.Code);
+                            break;
+                    }
+                }
+
+                if (this.Items.Count > 0)
+                    this.SelectedIndex = 0;
+            }
+        }
+
+        private void ClearAllData()
+        {
+            codeDataList.Clear();
+            this.Items.Clear();
+        }
+
+        public void SetCurSel(string text)
+        {
+            SetCurSel(valueType, text);
+        }
+
+        public void SetCurSelCode(string codeValue)
+        {
+            SetCurSel(ContentType.CodeValue, codeValue);
+        }
+
+        public void SetCurSel(ContentType valueType, string item)
+        {
+            if (item == "NO SELECTION")
+            {
+                this.SelectedIndex = 0;
+            }
+            else
+            {
+                int nCnt = this.Items.Count;
+                if (nCnt > 0)
+                {
+                    for (int i = 0; i < nCnt; i++)
+                    {
+                        string compareText = string.Empty;
+                        var data = codeDataList[i];
+
+                        switch (valueType)
+                        {
+                            case ContentType.KorName:
+                                compareText = data.KorName;
+                                break;
+                            case ContentType.EngName:
+                                compareText = data.EngName;
+                                break;
+                            case ContentType.CodeValue:
+                                compareText = data.Code;
+                                break;
+                            default:
+                                break;
+                        }
+
+                        if (item.Equals(compareText, StringComparison.OrdinalIgnoreCase))
+                        {
+                            this.SelectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+            }
+        }
+
+        public string GetCode()
+        {
+            try
+            {
+                int selectedIndex = this.SelectedIndex;
+                return selectedIndex >= 0 ? codeDataList[selectedIndex].Code : string.Empty;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+                return string.Empty;
+            }
+        }
+
+        public string GetCode(string text)
+        {
+            string result = string.Empty;
+
+            int itemCount = this.Items.Count;
+
+            if (itemCount > 0)
+            {
+                for (int i = 0; i < itemCount; i++)
+                {
+                    string compareText = string.Empty;
+                    var data = codeDataList[i];
+
+                    switch (valueType)
+                    {
+                        case ContentType.KorName:
+                            compareText = data.KorName;
+                            break;
+                        case ContentType.EngName:
+                            compareText = data.EngName;
+                            break;
+                        case ContentType.CodeValue:
+                            compareText = data.Code;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    if (string.Equals(text, compareText, StringComparison.OrdinalIgnoreCase))
+                    {
+                        result = data.Code;
+                        break;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public void GetCodeArg(out string text)
+        {
+            text = GetCode();
+        }
+
+        // Code --> Index
+        public uint GetCodeIdx(string code)
+        {
+            for (int i = 0; i < codeDataList.Count; i++)
+            {
+                if (code.Equals(codeDataList[i].Code))
+                {
+                    return codeDataList[i].Index;
+                }
+            }
+            return 0;
+        }
+
+        // KorName -> idx
+        public int GetKorNameToIdx(string korName)
+        {
+            for (int i = 0; i < codeDataList.Count; i++)
+            {
+                if (korName.Equals(codeDataList[i].KorName))
+                {
+                    return (int)codeDataList[i].Index;
+                }
+            }
+            return -1;
+        }
+
+        // KorName -> Code
+        public string GetKorNameToCode(string korName)
+        {
+            foreach (var data in codeDataList)
+            {
+                if (korName.Equals(data.KorName))
+                {
+                    return data.Code;
+                }
+            }
+            return string.Empty;
+        }
+
+        // Code -> KorName
+        public string GetCodeToKorName(string code)
+        {
+            foreach (var data in codeDataList)
+            {
+                if (code.Equals(data.Code))
+                {
+                    return data.KorName;
+                }
+            }
+            return string.Empty;
+        }
+
+        // Code -> EngNamne
+        public string GetCodeToEngName(string code)
+        {
+            foreach (var data in codeDataList)
+            {
+                if (code.Equals(data.Code))
+                {
+                    return data.EngName;
+                }
+            }
+            return string.Empty;
+        }
+
+        // SetCurSel -- Code
+        public void SetCurSelCode(int codeValue)
+        {
+            SetCurSelCode(codeValue.ToString());
+        }
+
+        public int GetCodeInt()
+        {
+            return int.TryParse(GetCode(), out int result) ? result : 0;
+        }
+
+        // Dummy method to simulate database query execution
+        private DataTable ExecuteQuery(string query)
+        {
+            // Replace with actual implementation to execute query and return DataTable
+            using (OracleCommand command = new OracleCommand(query, oraDB.GetConnectionObject()))
+            {
+                using (OracleDataAdapter adapter = new OracleDataAdapter(command))
+                {
+                    DataTable newData = new DataTable();
+                    adapter.Fill(newData);
+
+                    return newData;
+                }
+            }
+        }
+    }
+}
