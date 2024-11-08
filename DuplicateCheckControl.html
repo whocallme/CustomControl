@@ -1,0 +1,132 @@
+<UserControl x:Class="MyProject.Controls.DuplicationCheckControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:MyProject.Controls"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DesignHeight="25"
+             mc:Ignorable="d">
+    <Border Width="225">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="25" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="25" />
+            </Grid.RowDefinitions>
+
+            <materialDesign:PackIcon x:Name="TrueIcon"
+                                     Grid.Row="0"
+                                     Grid.Column="0"
+                                     Width="25"
+                                     Height="25"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Kind="CheckOutline"/>
+
+            <materialDesign:PackIcon x:Name="FalseIcon"
+                                     Grid.Row="0"
+                                     Grid.Column="0"
+                                     Width="25"
+                                     Height="25"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Kind="CloseOutline"/>
+
+            <TextBlock x:Name="CheckText"
+                       Grid.Row="0"
+                       Grid.Column="2"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Center"
+                       Text=""
+                       TextAlignment="Left" />
+        </Grid>
+    </Border>
+</UserControl>
+
+
+
+
+
+// DuplicateCheckControl.xaml.cs
+
+using System.Windows.Controls;
+using System.Windows.Media;
+
+namespace MyProject.Controls.DuplicateCheckControl
+{
+    public enum DuplicateState
+    {
+        None,
+        True,
+        False
+    }
+
+    public partial class DuplicationCheckControl : UserControl
+    {
+        private string trueText = "REGISTRATION IS NOT POSSIBLE";
+        private string falseText = "REGISTRATION IS POSSIBLE";
+        private string noneText = string.Empty;
+
+        private DuplicateState _duplicateState = DuplicateState.None;
+        public DuplicateState duplicateState
+        {
+            get { return _duplicateState; }
+            set
+            {
+                _duplicateState = value;
+            }
+        }
+
+        public DuplicationCheckControl()
+        {
+            InitializeComponent();
+        }
+
+        public void SetDuplicateState(DuplicateState state)
+        {
+            duplicateState = state;
+
+            if (duplicateState == DuplicateState.None)
+            {
+                TrueIcon.Visibility = System.Windows.Visibility.Hidden;
+                FalseIcon.Visibility = System.Windows.Visibility.Hidden;
+                CheckText.Text = noneText;
+                CheckText.Foreground = Brushes.Black;
+            }
+            else if (duplicateState == DuplicateState.True)
+            {
+                TrueIcon.Visibility = System.Windows.Visibility.Visible;
+                FalseIcon.Visibility = System.Windows.Visibility.Hidden;
+                CheckText.Text = trueText;
+
+                TrueIcon.Foreground = Brushes.Green;
+                CheckText.Foreground = Brushes.Green;
+            }
+            else if (duplicateState == DuplicateState.False)
+            {
+                TrueIcon.Visibility = System.Windows.Visibility.Hidden;
+                FalseIcon.Visibility = System.Windows.Visibility.Visible;
+                CheckText.Text = falseText;
+
+                FalseIcon.Foreground = Brushes.Red;
+                CheckText.Foreground = Brushes.Red;
+            }
+        }
+
+        public DuplicateState GetDuplicateState()
+        {
+            return duplicateState;
+        }
+
+        public void SetText(string trueText, string falseText, string noneText)
+        {
+            this.trueText = trueText;
+            this.falseText = falseText;
+            this.noneText = noneText;
+        }
+    }
+}
