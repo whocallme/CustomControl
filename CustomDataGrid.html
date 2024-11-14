@@ -1,0 +1,107 @@
+<Grid>
+	<DataGrid x:Name="SearchDataGrid"
+			  AutoGenerateColumns="False"
+			  CanUserAddRows="False"
+			  ColumnHeaderStyle="{StaticResource CenterAlignedHeader}"
+			  ItemsSource="{Binding SearchResults}"
+			  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+			  ScrollViewer.VerticalScrollBarVisibility="Auto"
+			  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+			  SelectionMode="Single"
+			  SelectionUnit="FullRow"
+			  Style="{StaticResource Pimp_DataGrid}">
+		<DataGrid.Columns>
+			<DataGridTemplateColumn Width="100" IsReadOnly="True">
+				<DataGridTemplateColumn.HeaderTemplate>
+					<DataTemplate>
+						<CheckBox x:Name="SelectAllCheckBox"
+								  Content=""
+								  IsChecked="{Binding DataContext.IsAllCheckItem, RelativeSource={RelativeSource AncestorType=DataGrid}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+					</DataTemplate>
+				</DataGridTemplateColumn.HeaderTemplate>
+				<DataGridTemplateColumn.CellTemplate>
+					<DataTemplate>
+						<CheckBox HorizontalAlignment="Center"
+								  VerticalAlignment="Center"
+								  IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+					</DataTemplate>
+
+				</DataGridTemplateColumn.CellTemplate>
+
+			</DataGridTemplateColumn>
+
+			<DataGridTemplateColumn Width="100"
+									Header="Admin"
+									IsReadOnly="True">
+				<DataGridTemplateColumn.CellTemplate>
+					<DataTemplate>
+						<materialDesign:PackIcon Width="24"
+												 Height="24"
+												 HorizontalAlignment="Center"
+												 VerticalAlignment="Center">
+							<materialDesign:PackIcon.Style>
+								<Style TargetType="materialDesign:PackIcon">
+									<Style.Triggers>
+										<!--  ADMIN_APPROVAL == 1, CheckCircle Icon  -->
+										<DataTrigger Binding="{Binding IS_ADMIN_APPROV}" Value="1">
+											<Setter Property="Foreground" Value="Green" />
+											<Setter Property="Kind" Value="CheckCircle" />
+										</DataTrigger>
+										<!--  ADMIN_APPROVAL == 0, Cancel Icon -->
+										<DataTrigger Binding="{Binding IS_ADMIN_APPROV}" Value="0">
+											<Setter Property="Foreground" Value="Red" />
+											<Setter Property="Kind" Value="Cancel" />
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</materialDesign:PackIcon.Style>
+						</materialDesign:PackIcon>
+					</DataTemplate>
+				</DataGridTemplateColumn.CellTemplate>
+
+			</DataGridTemplateColumn>
+
+			<DataGridTextColumn Width="Auto"
+								MinWidth="200"
+								Binding="{Binding USER_ID}"
+								Header="ID"
+								IsReadOnly="True" />
+			<DataGridTextColumn Width="Auto"
+								MinWidth="200"
+								Binding="{Binding TEST_TYPE}"
+								Header="TEST TYPE"
+								IsReadOnly="True" />
+			<DataGridTextColumn Width="Auto"
+								MinWidth="200"
+								Binding="{Binding USER_TYPE}"
+								Header="USER TYPE"
+								IsReadOnly="True" />
+			<DataGridTextColumn Width="Auto"
+								MinWidth="200"
+								Binding="{Binding USER_IPADDR}"
+								Header="IP"
+								IsReadOnly="True" />
+			<DataGridTextColumn Width="Auto"
+								MinWidth="200"
+								Binding="{Binding USER_MODEL}"
+								Header="MODEL"
+								IsReadOnly="True" />
+			<DataGridTextColumn Width="Auto"
+								MinWidth="150"
+								Binding="{Binding USER_SUB}"
+								Header="SUB"
+								IsReadOnly="True" />
+			<DataGridTextColumn Width="Auto"
+								MinWidth="267"
+								Binding="{Binding RESULT}"
+								Header="RESULT"
+								IsReadOnly="True" />
+			<DataGridTextColumn Width="Auto"
+								MinWidth="130"
+								Binding="{Binding MAPPING_INFO}"
+								Header="MAPPING_INFO"
+								IsReadOnly="True" />
+
+		</DataGrid.Columns>
+	</DataGrid>
+</Grid>
