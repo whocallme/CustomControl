@@ -1,0 +1,39 @@
+public void ScaleControl(double widthFactor, double heightFactor)
+{
+	// Border Size
+	Border border = (Border)this.Content;
+	border.Width *= widthFactor;
+	border.Height *= heightFactor;
+
+	// Grid 내부의 요소들 크기 변경
+	Grid grid = (Grid)border.Child;
+
+	// RowDefinitions 및 ColumnDefinitions 크기 변경
+	foreach (var rowDefinition in grid.RowDefinitions)
+	{
+		rowDefinition.Height = new GridLength(rowDefinition.Height.Value * heightFactor, rowDefinition.Height.GridUnitType);
+	}
+
+	foreach (var columnDefinition in grid.ColumnDefinitions)
+	{
+		columnDefinition.Width = new GridLength(columnDefinition.Width.Value * widthFactor, columnDefinition.Width.GridUnitType);
+	}
+
+	// Grid 내부의 요소들 크기 변경
+	foreach (UIElement child in grid.Children)
+	{
+		if (child is FrameworkElement element)
+		{
+			element.Width *= widthFactor;
+			element.Height *= heightFactor;
+
+			// Padding, Margin 조정
+			element.Margin = new Thickness(
+				element.Margin.Left * widthFactor,
+				element.Margin.Top * heightFactor,
+				element.Margin.Right * widthFactor,
+				element.Margin.Bottom * heightFactor
+			);
+		}
+	}
+}
