@@ -1,11 +1,12 @@
 using Oracle.ManagedDataAccess.Client;
-using MyProject.Common.Database;
+using Project.Common.Database;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Windows;
+using System.Windows.Controls;
 
-namespace MyProject.CodeCombobox
+namespace Project.Controls.CodeCombobox
 {
     public enum ContentType
     {
@@ -14,8 +15,29 @@ namespace MyProject.CodeCombobox
         CodeValue
     }
 
+    public enum MaterialCodeComboBoxType
+    {
+        Type = 0,
+        Category
+    }
+
     public class CodeComboboxData
     {
+        public CodeComboboxData() { }
+
+        public CodeComboboxData(CodeComboboxData source)
+        {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            Index = source.Index;
+            Code = source.Code;
+            KorName = source.KorName;
+            EngName = source.EngName;
+        }
+
         public uint Index { get; set; }
         public string Code { get; set; }
         public string KorName { get; set; }
@@ -34,18 +56,108 @@ namespace MyProject.CodeCombobox
             // Constructor implementation
         }
 
-        // No select
+        #region Dependency Initialization
+        public string CodeMainGroup
+        {
+            get => (string)GetValue(CodeMainGroupProperty);
+            set => SetValue(CodeMainGroupProperty, value);
+        }
+
+        public static readonly DependencyProperty CodeMainGroupProperty =
+            DependencyProperty.Register("CodeMainGroup", typeof(string), typeof(CodeComboBox),
+                new PropertyMetadata("", OnCodeConditionChanged));
+
+        public string CodeSubGroup
+        {
+            get => (string)GetValue(CodeSubGroupProperty);
+            set => SetValue(CodeSubGroupProperty, value);
+        }
+
+        public static readonly DependencyProperty CodeSubGroupProperty =
+            DependencyProperty.Register("CodeSubGroup", typeof(string), typeof(CodeComboBox),
+                new PropertyMetadata("", OnCodeConditionChanged));
+
+        public bool UseNoneItem
+        {
+            get => (bool)GetValue(UseNoneItemProperty);
+            set => SetValue(UseNoneItemProperty, value);
+        }
+
+        public static readonly DependencyProperty UseNoneItemProperty =
+            DependencyProperty.Register("UseNoneItem", typeof(bool), typeof(CodeComboBox),
+                new PropertyMetadata(false, OnCodeConditionChanged));
+
+        // 조건 바뀌면 자동으로 데이터 다시 로딩
+        private static void OnCodeConditionChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is CodeComboBox combo)
+            {
+                combo.SetCodeData(combo.valueType, combo.CodeMainGroup, combo.CodeSubGroup, combo.UseNoneItem);
+            }
+        }
+
+        #endregion
+
+
+        #region Dependency Properties
+        /// <summary>
+        /// 선택된 항목의 데이터를 나타내는 DependencyProperty
+        /// </summary>
+        public CodeComboboxData SelectedCodeData
+        {
+            get => (CodeComboboxData)GetValue(SelectedCodeDataProperty);
+            set => SetValue(SelectedCodeDataProperty, value);
+        }
+
+        /// <summary>
+        /// <see cref="SelectedCodeData"/>의 DependencyProperty 정의
+        /// </summary>
+        public static readonly DependencyProperty SelectedCodeDataProperty =
+            DependencyProperty.Register(
+                nameof(SelectedCodeData),
+                typeof(CodeComboboxData),
+                typeof(CodeComboBox),
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnSelectedCodeDataChanged));
+
+        private static void OnSelectedCodeDataChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is CodeComboBox combo && e.NewValue is CodeComboboxData data)
+            {
+                // DependencyProperty 값 변경 시, 해당 항목으로 선택 설정
+                combo.SetCurSel(ContentType.CodeValue, data.Code);
+            }
+        }
+
+        protected override void OnSelectionChanged(SelectionChangedEventArgs e)
+        {
+            base.OnSelectionChanged(e);
+
+            int idx = SelectedIndex;
+
+            if (idx >= 0 && idx < codeDataList.Count)
+            {
+                SelectedCodeData = codeDataList[idx];
+            }
+            else
+            {
+                SelectedCodeData = null;
+            }
+        }
+
+        #endregion
+
+        // '선택없음' 항목을 추가하고, 선택함
         public void SetNoneStatus(bool bNone)
         {
             if (bNone)
             {
-                this.Items.Insert(0, "NO SELECTION");
-                
+                this.Items.Insert(0, "선택없음");
+
                 codeDataList.Add(new CodeComboboxData
                 {
                     Index = 0,
                     Code = "",
-                    KorName = "NO SELECTION",
+                    KorName = "선택없음",
                     EngName = "None"
                 });
 
@@ -54,7 +166,7 @@ namespace MyProject.CodeCombobox
         }
 
         // query = test
-        public void SetCodeData(ContentType valueType, string mainGroup, string subGroup = "", bool bNoneStatus = false)
+        public void SetCodeData(ContentType valueType, string mainGroup, string subGroup = "", bool bNoneStatus = false, bool autoSelectFirst = true)
         {
             this.valueType = valueType;
             ClearAllData();
@@ -62,11 +174,11 @@ namespace MyProject.CodeCombobox
 
             if (subGroup.Length < 1)
             {
-                query = string.Format($"SELECT CODE, KOR_NAME, ENG_NAME FROM TB_CODE WHERE CODE_GROUP= '{mainGroup}' AND USE='1' ORDER BY SORT ASC");
+                query = string.Format($"SELECT CODE, KOR_NAME, ENG_NAME FROM TB_CODE WHERE GRP= '{mainGroup}' AND IS_USE ='1' ORDER BY SORT ASC");
             }
             else
             {
-                query = string.Format($"SELECT CODE, KOR_NAME, ENG_NAME FROM TB_CODE WHERE CODE_GROUP= '{mainGroup}' AND CODE_SUB_GROUP = '{subGroup}' AND USE='1' ORDER BY SORT ASC");
+                query = string.Format($"SELECT CODE, KOR_NAME, ENG_NAME FROM TB_CODE WHERE GRP= '{mainGroup}' AND SUB_GRP = '{subGroup}' AND IS_USE ='1' ORDER BY SORT ASC");
             }
 
 
@@ -106,8 +218,94 @@ namespace MyProject.CodeCombobox
                     }
                 }
 
-                if (this.Items.Count > 0)
-                    this.SelectedIndex = 0;
+                if (this.Items.Count > 0 && autoSelectFirst)
+                {
+                    // ⭐ Dispatcher 활용하여 UI 로딩 이후 선택을 처리
+                    this.Dispatcher.InvokeAsync(() =>
+                    {
+                        this.SelectedIndex = 0;
+                    }, System.Windows.Threading.DispatcherPriority.Loaded);
+                }
+            }
+        }
+
+        public void SetCodeData_Material(ContentType valueType, string mainGroup, string subGroup, MaterialCodeComboBoxType materialCodeComboBoxType, bool bNoneStatus = false, bool autoSelectFirst = true)
+        {
+            this.valueType = valueType;
+            ClearAllData();
+            string query = "";
+
+            string Code = "";
+            string KorName = "";
+
+            if (materialCodeComboBoxType == MaterialCodeComboBoxType.Type)
+            {
+                if(mainGroup == "type_all")
+                {
+                    query = string.Format($"SELECT DISTINCT TYPE_ENG, TYPE_KOR FROM TB_MATERIAL_ITEMS");
+                }
+                else
+                {
+                    query = string.Format($"SELECT DISTINCT TYPE_ENG, TYPE_KOR FROM TB_MATERIAL_ITEMS WHERE CATEGORY_ENG='{subGroup}'");
+                }
+                Code = "TYPE_ENG";
+                KorName = "TYPE_KOR";
+            }
+            else
+            {
+                if (subGroup == "category_all")
+                {
+                    query = string.Format($"SELECT DISTINCT CATEGORY_ENG, CATEGORY_KOR FROM TB_MATERIAL_ITEMS");
+                }
+                else
+                {
+                    query = string.Format($"SELECT DISTINCT CATEGORY_ENG, CATEGORY_KOR FROM TB_MATERIAL_ITEMS WHERE TYPE_ENG= '{mainGroup}'");
+                }
+                Code = "CATEGORY_ENG";
+                KorName = "CATEGORY_KOR";
+            }
+
+
+            // Assuming you have a method to execute SQL query and return a DataTable
+            DataTable dataTable = ExecuteQuery(query);
+
+            if (dataTable != null && dataTable.Rows.Count > 0)
+            {
+                codeDataList.Clear();
+                if (bNoneStatus)
+                {
+                    SetNoneStatus(bNoneStatus);
+                }
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    CodeComboboxData data = new CodeComboboxData
+                    {
+                        Index = (uint)codeDataList.Count,
+                        Code = row[Code].ToString(),
+                        KorName = row[KorName].ToString(),
+                    };
+
+                    codeDataList.Add(data);
+
+                    switch (valueType)
+                    {
+                        case ContentType.KorName:
+                            this.Items.Add(data.KorName);
+                            break;
+                        case ContentType.CodeValue:
+                            this.Items.Add(data.Code);
+                            break;
+                    }
+                }
+
+                if (this.Items.Count > 0 && autoSelectFirst)
+                {
+                    // ⭐ Dispatcher 활용하여 UI 로딩 이후 선택을 처리
+                    this.Dispatcher.InvokeAsync(() =>
+                    {
+                        this.SelectedIndex = 0;
+                    }, System.Windows.Threading.DispatcherPriority.Loaded);
+                }
             }
         }
 
@@ -129,7 +327,7 @@ namespace MyProject.CodeCombobox
 
         public void SetCurSel(ContentType valueType, string item)
         {
-            if (item == "NO SELECTION")
+            if (item == "선택없음")
             {
                 this.SelectedIndex = 0;
             }
@@ -220,6 +418,25 @@ namespace MyProject.CodeCombobox
             }
 
             return result;
+
+
+
+            /*foreach (var data in codeDataList)
+            {
+                string compareText = valueType switch
+                {
+                    ValueType.KorName => data.KorName,
+                    ValueType.EngName => data.EngName,
+                    ValueType.CodeValue => data.Code,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                if (text.Equals(compareText))
+                {
+                    return data.Code;
+                }
+            }*/
+            //return string.Empty;
         }
 
         public void GetCodeArg(out string text)
@@ -304,19 +521,49 @@ namespace MyProject.CodeCombobox
         }
 
         // Dummy method to simulate database query execution
-        private DataTable ExecuteQuery(string query)
+        private DataTable ExecuteQuery(string query, params OracleParameter[] parameters)
         {
-            // Replace with actual implementation to execute query and return DataTable
-            using (OracleCommand command = new OracleCommand(query, oraDB.GetConnectionObject()))
-            {
-                using (OracleDataAdapter adapter = new OracleDataAdapter(command))
-                {
-                    DataTable newData = new DataTable();
-                    adapter.Fill(newData);
+            DataTable resultTable = new DataTable();
 
-                    return newData;
-                }
+            try
+            {
+                // 동기화 처리
+                OracleDatabaseLockObject.Instance.ExecuteCriticalSection(() =>
+                {
+                    using (OracleCommand command = new OracleCommand(query, oraDB.GetConnectionObject()))
+                    {
+                        // 매개변수 추가
+                        if (parameters != null)
+                        {
+                            foreach (var parameter in parameters)
+                            {
+                                command.Parameters.Add(parameter);
+                            }
+                        }
+
+                        using (OracleDataAdapter adapter = new OracleDataAdapter(command))
+                        {
+                            // DataTable에 결과 채우기
+                            adapter.Fill(resultTable);
+                        }
+                    }
+                });
             }
+            catch (OracleException ex)
+            {
+                // Oracle 예외 처리
+                Console.WriteLine($"OracleException occurred: {ex.Message}");
+                throw; // 필요시 호출자에게 예외 전달
+            }
+            catch (Exception ex)
+            {
+                // 일반 예외 처리
+                Console.WriteLine($"Exception occurred: {ex.Message}");
+                throw; // 필요시 호출자에게 예외 전달
+            }
+
+            return resultTable;
         }
+
     }
 }
